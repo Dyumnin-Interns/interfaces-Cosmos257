@@ -30,37 +30,37 @@ class ReadDriver(BusDriver):
         self.clk=clk
         self.bus.en.value=0
         self.callback=sb_callback
-        self.append(0)
     async def driver_send(self,address,sync=True):
-        while True:
-            if self.bus.rdy.value!=1:
-                await RisingEdge(self.bus.rdy)
-            self.bus.en.value=1
-            await ReadOnly()
-            data_val=self.bus.data.value
-            self.callback(data_val)
-            await RisingEdge(self.clk)
-            self.bus.en.value=0
-            await NextTimeStep()
-ReadDriver(dut,"read", dut.CLK, callback=sb_fn)
+        if self.bus.rdy.value!=1:
+            await RisingEdge(self.bus.rdy)
+        self.bus.en.value=1
+        await ReadOnly()
+        data_val=self.bus.data.value
+        self.callback(data_val)
+        await RisingEdge(self.clk)
+        self.bus.en.value=0
+        await NextTimeStep()
+
 @cocotb.test()
 async def dut_test(dut):
     global expected_value
-    a=(0,0,1,1)
-    b=(0,1,0,1)
-    expected_value=(0,1,1,1)
+    a=[0,0,1,1]
+    b=[0,1,0,1]
+    expected_value=[0,1,1,1]
     dut.RST_N.value=1
     await Timer(1,"ns")
     dut.RST_N.value=0
     await Timer(1,"ns")
     await RisingEdge(dut.CLK)
     dut.RST_N.value=1
-    adrv=InputDriver(dut,"a",dut.CLK)
-    bdrv=InputDriver(dut,"b",dut.CLK)
-    OutputDriver(dut,"y",dut.CLK, callback=sb_fn)
+    write_driver=WriteDriver(dut,"write",dut.CLK)
+    read_driver=ReadDriver(dut,"read",dut.CLK, sb_fn)
+    
     for i in range(4):
-        adrv.append(a[i])
-        bdrv.append(b[i])
+        await write_driver.driver_send(a[i], address=4)
+        await write_driver.driver_send(b[i], address=5)
+        await Timer(2,"ns")
+        await read_driver.driver_send(address=3)
     while len(expected_value)>0:
         await Timer(2,"ns")
         
