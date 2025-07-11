@@ -57,10 +57,10 @@ async def dut_test(dut):
     read_driver=ReadDriver(dut,"read",dut.CLK, sb_fn)
     
     for i in range(4):
-        await write_driver.driver_send(a[i], address=4)
-        await write_driver.driver_send(b[i], address=5)
+        write_driver.driver_send(a[i], address=4)
+        write_driver.driver_send(b[i], address=5)
         await Timer(2,"ns")
-        await read_driver.driver_send(address=3)
+        read_driver.driver_send(address=3)
     while len(expected_value)>0:
         await Timer(2,"ns")
         
