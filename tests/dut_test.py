@@ -34,6 +34,7 @@ class WriteDriver(BusDriver):
         self.bus.en.value = 0
 
     async def driver_send(self, value, address):
+        await RisingEdge(self.clk)
         if self.bus.rdy.value != 1:
             print(f"[WRITE] Waiting for rdy=1 at addr={address}")
             await RisingEdge(self.bus.rdy)
@@ -57,6 +58,7 @@ class ReadDriver(BusDriver):
         self.callback = sb_callback
 
     async def driver_send(self, address, verify=False):
+        await RisingEdge(self.clk)
         if self.bus.rdy.value != 1:
             print(f"[READ] Waiting for rdy=1 at addr={address}")
             await RisingEdge(self.bus.rdy)
