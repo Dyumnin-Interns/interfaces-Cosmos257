@@ -104,19 +104,19 @@ async def wait_for_status(read_driver, status_addr):
 # Main test
 @cocotb.test()
 async def dut_test(dut):
+    #defining input values
     global expected_value
     a = [0, 0, 1, 1]
     b = [0, 1, 0, 1]
     expected_value = [0, 1, 1, 1]  # Expected Y outputs only
 
-    # Reset DUT
+    # Reset sequence
     dut.RST_N.value = 1
     await Timer(1, "ns")
     dut.RST_N.value = 0
     await Timer(1, "ns")
     await RisingEdge(dut.CLK)
     dut.RST_N.value = 1
-    print("[TEST] Reset done.")
 
     # Instantiate drivers
     write_driver = WriteDriver(dut, "write", dut.CLK)
