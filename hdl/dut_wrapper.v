@@ -44,9 +44,9 @@ dut dut(
   initial begin
     $dumpfile("waves.vcd");
     $dumpvars;
-    CLK=0
+    CLK=0;
     forever begin
-	    #5 CLK=~CLK
+	    #5 CLK=~CLK;
     end 
   end
 endmodule
