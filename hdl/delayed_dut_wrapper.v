@@ -26,7 +26,7 @@ module dut_wrapper(CLK,
   output reg  CLK;
   input  RST_N;
 
-dut dut(
+dut delayed_dut(
 	.CLK(CLK),
 	.RST_N(RST_N),
 
