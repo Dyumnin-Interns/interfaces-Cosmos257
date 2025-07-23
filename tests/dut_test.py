@@ -5,11 +5,12 @@ from cocotb_bus.monitors import BusMonitor
 import os
 import random
 from cocotb_coverage.coverage import CoverPoint, CoverCross, coverage_db
+import constraint
 
 # Scoreboard callback function
 def sb_fn(actual_value):
     global expected_value
-    print(f"[SB] Expected: {expected_value[0]}, Got: {actual_value}")
+    #print(f"[SB] Expected: {expected_value[0]}, Got: {actual_value}")
     assert actual_value == expected_value.pop(0), "Scoreboard matching failed"
 
 @CoverPoint("top.a", xf=lambda x,y:x, bins=[0,1])
@@ -24,6 +25,16 @@ def ab_cover(a,b):
 def a_prot_cover(txn):
     pass
 
+@CoverPoint("top.w.wd_addr",xf = lambda wd_addr,wd_en, wd_data, rd_en, rd_addr: wd_addr,bins=[4,5])
+@CoverPoint("top.w.wd_data",xf = lambda wd_addr,wd_en, wd_data, rd_en, rd_addr: wd_data,bins=[0,1])
+@CoverPoint("top.w.wd_en",xf = lambda wd_addr,wd_en, wd_data, rd_en, rd_addr: wd_en,bins=[0,1])
+@CoverPoint("top.r.rd_addr",xf = lambda wd_addr,wd_en, wd_data, rd_en, rd_addr: rd_addr,bins=[0,1,2,3])
+@CoverPoint("top.r.rd_en",xf = lambda wd_addr,wd_en, wd_data, rd_en, rd_addr: rd_en,bins=[0,1])
+@CoverCross("top.cross.w",items=['top.w.wd_addr', 'top.w.wd_data', 'top.w.wd_en'])
+@CoverCross("top.cross.r",items=["top.r.rd_en", "top.r.rd_addr"])
+def wr_cover(wd_addr, wd_en, wd_data, rd_en, rd_addr):
+    pass
+
 # Write driver
 class WriteDriver(BusDriver):
     _signals = ["rdy", "en", "data", "address"]
@@ -34,11 +45,12 @@ class WriteDriver(BusDriver):
         self.bus.en.value = 0
 
     async def driver_send(self, value, address):
-        await RisingEdge(self.clk)
+        for i in range(random.randint(0,20)):
+            await RisingEdge(self.clk)
         if self.bus.rdy.value != 1:
-            print(f"[WRITE] Waiting for rdy=1 at addr={address}")
+            #print(f"[WRITE] Waiting for rdy=1 at addr={address}")
             await RisingEdge(self.bus.rdy)
-        print(f"[WRITE] Writing value={value} to address={address}")
+        #print(f"[WRITE] Writing value={value} to address={address}")
         self.bus.en.value = 1
         self.bus.data.value = value
         self.bus.address.value = address
@@ -58,16 +70,17 @@ class ReadDriver(BusDriver):
         self.callback = sb_callback
 
     async def driver_send(self, address, verify=False):
-        await RisingEdge(self.clk)
+        for i in range(random.randint(0,20)):
+            await RisingEdge(self.clk)
         if self.bus.rdy.value != 1:
-            print(f"[READ] Waiting for rdy=1 at addr={address}")
+            #print(f"[READ] Waiting for rdy=1 at addr={address}")
             await RisingEdge(self.bus.rdy)
-        print(f"[READ] Reading from address={address}")
+        #print(f"[READ] Reading from address={address}")
         self.bus.en.value = 1
         self.bus.address.value = address
         await ReadOnly()
         data_val = self.bus.data.value.integer
-        print(f"[READ] Got data={data_val} from address={address}")
+        #print(f"[READ] Got data={data_val} from address={address}")
         if verify:
             self.callback(data_val)
         await RisingEdge(self.clk)
@@ -97,7 +110,7 @@ async def wait_for_status(read_driver, status_addr):
     attempts = 0
     while status != 1:
         status = await read_driver.driver_send(address=status_addr, verify=False)
-        print(f"[WAIT] Status[{status_addr}] = {status}")
+        #print(f"[WAIT] Status[{status_addr}] = {status}")
         await Timer(1, "ns")
         attempts += 1
         if attempts > 50:
@@ -108,9 +121,7 @@ async def wait_for_status(read_driver, status_addr):
 async def dut_test(dut):
     #defining input values
     global expected_value
-    a = [0, 0, 1, 1]
-    b = [0, 1, 0, 1]
-    expected_value = [0, 1, 1, 1]  # Expected Y outputs only
+    expected_value = []  # Expected Y outputs only
 
     # Reset sequence
     dut.RST_N.value = 1
@@ -126,14 +137,14 @@ async def dut_test(dut):
     IO_Monitor(dut,"write",dut.CLK, callback=a_prot_cover)
 
     for i in range(4):
-        print(f"\n[TEST] ===== Iteration {i} =====")
+        #print(f"\n[TEST] ===== Iteration {i} =====")
         # Wait and write to A
         await wait_for_status(read_driver, 0)  # A_Status
-        await write_driver.driver_send(a[i], address=4)
+        await write_driver.driver_send(a, address=4)
 
         # Wait and write to B
         await wait_for_status(read_driver, 1)  # B_Status
-        await write_driver.driver_send(b[i], address=5)
+        await write_driver.driver_send(, address=5)
 
         ab_cover(a[i],b[i])
 
@@ -143,6 +154,22 @@ async def dut_test(dut):
 
         # Small delay between iterations
         await Timer(2, "ns")
+
+    pkt=PacketGenerator()
+    pkt.solve()
+
+    for i in range(10):
+        pkt_vals=pkt.get()
+        print(f"{pkt.get()}")
+
+        wr_cover(
+        pkt_vals["write_address"],
+        pkt_vals["write_data"],
+        pkt_vals["write_en"],
+        pkt_vals["read_en"],
+        pkt_vals["read_address"]
+    )
+
     coverage_db.report_coverage(cocotb.log.info, bins = True)
     coverage_file=os.path.join(os.getenv("RESULT_PATH","./"),"coverage.xml")
     coverage_db.export_to_xml(filename=coverage_file)
