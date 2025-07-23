@@ -1,4 +1,4 @@
-module dut_wrapper(CLK,
+module delayed_dut_wrapper(CLK,
 	   RST_N,
 
 	   write_address,
