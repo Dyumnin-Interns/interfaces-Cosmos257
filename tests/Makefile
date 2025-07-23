@@ -13,5 +13,4 @@ or:
 delayed_or:
     rm -rf sim_build
     $(MAKE) sim MODULE=dut_test TOPLEVEL=delayed_dut_wrapper
-
 include $(shell cocotb-config --makefiles)/Makefile.sim
