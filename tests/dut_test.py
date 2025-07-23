@@ -138,15 +138,19 @@ async def dut_test(dut):
 
     for i in range(4):
         #print(f"\n[TEST] ===== Iteration {i} =====")
+        a=random.randint(0,1)
+        b=random.randint(0,1)
+        expected_value.append(a|b)
+        
         # Wait and write to A
         await wait_for_status(read_driver, 0)  # A_Status
         await write_driver.driver_send(a, address=4)
 
         # Wait and write to B
         await wait_for_status(read_driver, 1)  # B_Status
-        await write_driver.driver_send(, address=5)
+        await write_driver.driver_send(b, address=5)
 
-        ab_cover(a[i],b[i])
+        ab_cover(a,b)
 
         # Wait and read Y output
         await wait_for_status(read_driver, 2)  # Y_Status
