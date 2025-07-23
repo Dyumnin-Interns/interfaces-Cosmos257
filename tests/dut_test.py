@@ -116,6 +116,27 @@ async def wait_for_status(read_driver, status_addr):
         if attempts > 50:
             raise TimeoutError(f"Timeout waiting for status=1 at address {status_addr}")
 
+
+class PacketGenerator:
+    def __init__(self):
+        self.p=constraint.Problem()
+        self.p.addVariable("write_en",[0,1])
+        self.p.addVariable("read_en",[0,1])
+        self.p.addVariable("write_address",[4,5])
+        self.p.addVariable("read_address",[0,1,2,3])
+        self.p.addVariable("write_data",[0,1])
+        self.p.addVariable("write_rdy", [1])
+        self.p.addVariable("read_rdy",[1])
+
+        self.p.addConstraint(lambda re,we,rr: re==1 if we==0 and rr==1 else re==0,["read_en","write_en","read_rdy"])
+        self.p.addConstraint(lambda we,re,wr: we==1 if re==0 and wr==1 else we==0, ["write_en","read_en","write_rdy"])
+
+    def solve(self):
+        self.solutions=self.p.getSolutions()
+
+    def get(self):
+        return random.choice(self.solutions)
+
 # Main test
 @cocotb.test()
 async def dut_test(dut):
