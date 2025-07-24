@@ -4,8 +4,8 @@ from cocotb_bus.drivers import BusDriver
 from cocotb_bus.monitors import BusMonitor
 import os
 import random
-from cocotb_coverage.coverage import CoverPoint, CoverCross, coverage_db
 import constraint
+from cocotb_coverage.coverage import CoverPoint, CoverCross, coverage_db
 
 # Scoreboard callback function
 def sb_fn(actual_value):
@@ -18,7 +18,7 @@ def sb_fn(actual_value):
 @CoverCross("top.cross.ab", items=["top.a","top.b"])
 def ab_cover(a,b):
     pass
-    
+
 @CoverPoint("top.prot.a.current",xf=lambda x:x["current"], bins=["Idle","Rdy","Txn"])
 @CoverPoint("top.prot.a.previous",xf=lambda x:x["previous"], bins=["Idle","Rdy","Txn"])
 @CoverCross("top.a_prot.cross",items=["top.prot.a.current","top.prot.a.previous"])
@@ -34,6 +34,7 @@ def a_prot_cover(txn):
 @CoverCross("top.cross.r",items=["top.r.rd_en", "top.r.rd_addr"])
 def wr_cover(wd_addr, wd_en, wd_data, rd_en, rd_addr):
     pass
+
 
 # Write driver
 class WriteDriver(BusDriver):
@@ -88,6 +89,7 @@ class ReadDriver(BusDriver):
         await NextTimeStep()
         return data_val
 
+
 class IO_Monitor(BusMonitor):
     _signals=["rdy","en","data"]
     async def _monitor_recv(self):
@@ -117,6 +119,7 @@ async def wait_for_status(read_driver, status_addr):
             raise TimeoutError(f"Timeout waiting for status=1 at address {status_addr}")
 
 
+
 class PacketGenerator:
     def __init__(self):
         self.p=constraint.Problem()
@@ -137,12 +140,17 @@ class PacketGenerator:
     def get(self):
         return random.choice(self.solutions)
 
+
+
 # Main test
 @cocotb.test()
 async def dut_test(dut):
     #defining input values
     global expected_value
-    expected_value = []  # Expected Y outputs only
+    #a = [0, 0, 1, 1]
+    #b = [0, 1, 0, 1]
+    #expected_value = [0, 1, 1, 1]  # Expected Y outputs only
+    expected_value=[]
 
     # Reset sequence
     dut.RST_N.value = 1
@@ -157,12 +165,13 @@ async def dut_test(dut):
     read_driver = ReadDriver(dut, "read", dut.CLK, sb_fn)
     IO_Monitor(dut,"write",dut.CLK, callback=a_prot_cover)
 
-    for i in range(4):
-        #print(f"\n[TEST] ===== Iteration {i} =====")
+    for i in range(20):
+        #print(f"\n[TEST] Iteration {i}")
+
         a=random.randint(0,1)
         b=random.randint(0,1)
         expected_value.append(a|b)
-        
+
         # Wait and write to A
         await wait_for_status(read_driver, 0)  # A_Status
         await write_driver.driver_send(a, address=4)
@@ -173,6 +182,9 @@ async def dut_test(dut):
 
         ab_cover(a,b)
 
+
+
+      
         # Wait and read Y output
         await wait_for_status(read_driver, 2)  # Y_Status
         await read_driver.driver_send(address=3, verify=True)
@@ -198,7 +210,3 @@ async def dut_test(dut):
     coverage_db.report_coverage(cocotb.log.info, bins = True)
     coverage_file=os.path.join(os.getenv("RESULT_PATH","./"),"coverage.xml")
     coverage_db.export_to_xml(filename=coverage_file)
-
-
-        
-    
