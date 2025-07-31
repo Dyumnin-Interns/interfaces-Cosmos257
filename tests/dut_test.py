@@ -195,7 +195,7 @@ async def dut_test(dut):
     pkt=PacketGenerator()
     pkt.solve()
 
-    for i in range(10):
+    for i in range(35):
         pkt_vals=pkt.get()
         print(f"{pkt.get()}")
 
